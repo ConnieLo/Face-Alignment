@@ -109,5 +109,24 @@ def gauss_blur_imgs(imgs): #this function takes an array of images and returns t
   
   return blurd_imgs
 
+#takes the image and dimension of grid as arguments
+def get_init_kps(img, grid_size): 
+  kps = [cv.KeyPoint(x, y, img.shape[0]//grid_size) for x in range((img.shape[0]//grid_size)//2, img.shape[0], img.shape[0]//grid_size) for y in range((img.shape[0]//grid_size)//2, img.shape[1], img.shape[0]//grid_size)]
+  return kps
+
+blurd_train_imgs = gauss_blur_imgs(data['images'])#blurs the training images
+
+train_kps = []
+for img in blurd_train_imgs:
+  train_kps.append(get_init_kps(img, 7))
+
+sift.compute(blurd_train_imgs[0], train_kps[0])
+img_kp = np.zeros_like(data['images'][0])
+cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
+
+plt.imshow(img_kp)
+plt.axis('off')
+plt.show()
+
 
 
