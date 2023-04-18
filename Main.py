@@ -1,4 +1,10 @@
 import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+from scipy.signal import convolve2d, convolve
+
+#sift object
+sift = cv.SIFT_create()
 
 # Load the data using np.load
 data = np.load('resources/training_images_full.npz', allow_pickle=True)
@@ -8,7 +14,7 @@ images = data['images']
 # and the data points
 pts = data['points']
 
-print(images.shape, pts.shape)
+#print(images.shape, pts.shape)
 
 # Load the data that only has a subset of annotations using np.load
 data = np.load('resources/training_images_subset.npz', allow_pickle=True)
@@ -18,19 +24,18 @@ images_subset = data['images']
 # and the data points
 pts_subset = data['points']
 
-print(images_subset.shape, pts_subset.shape)
+#print(images_subset.shape, pts_subset.shape)
 
 test_data = np.load('resources/test_images.npz', allow_pickle=True)
 test_images = test_data['images']
-print(test_images.shape)
+#print(test_images.shape)
 
 example_data = np.load('resources/examples.npz', allow_pickle=True)
 example_images = example_data['images']
-print(example_images.shape)
+#print(example_images.shape)
 
 #visualises points data
 def visualise_pts(img, pts):
-  import matplotlib.pyplot as plt
   plt.imshow(img)
   plt.plot(pts[:, 0], pts[:, 1], '+r', ms=7)
   plt.show()
@@ -83,4 +88,26 @@ def save_as_csv(points, location = '.'):
     assert points.shape[0]==554, 'wrong number of image points, should be 554 test images'
     assert np.prod(points.shape[1:])==44*2, 'wrong number of points provided. There should be 34 points with 2 values (x,y) per point'
     np.savetxt(location + '/results.csv', np.reshape(points, (points.shape[0], -1)), delimiter=',')
+
+'''
+def gauss_blur_img(img): #this function applies the gaussian blur to an image
+  gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+  smooth = cv.GaussianBlur(gray, (101,101), 0)
+  division = cv.divide(gray, smooth, scale=255)
+  plt.imshow(division, cmap='gray', vmin=0, vmax=255)
+  plt.show()
+  return division'''
+
+#make new list of blurred images
+
+def gauss_blur_imgs(imgs): #this function takes an array of images and returns them all with gaussian blur
+  blurd_imgs = []
+  for img in imgs:
+    blurd = np.uint8(np.mean(img, axis=2)) #gray_scale
+    blurd = cv.GaussianBlur(blurd, (15,15), 0) #blur
+    blurd_imgs.append(blurd)
+  
+  return blurd_imgs
+
+
 
