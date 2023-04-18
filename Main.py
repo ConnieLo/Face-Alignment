@@ -83,3 +83,4 @@ def save_as_csv(points, location = '.'):
     assert points.shape[0]==554, 'wrong number of image points, should be 554 test images'
     assert np.prod(points.shape[1:])==44*2, 'wrong number of points provided. There should be 34 points with 2 values (x,y) per point'
     np.savetxt(location + '/results.csv', np.reshape(points, (points.shape[0], -1)), delimiter=',')
+
