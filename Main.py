@@ -109,24 +109,38 @@ def gauss_blur_imgs(imgs): #this function takes an array of images and returns t
   
   return blurd_imgs
 
-#takes the image and dimension of grid as arguments
-def get_init_kps(img, grid_size): 
-  kps = [cv.KeyPoint(x, y, img.shape[0]//grid_size) for x in range((img.shape[0]//grid_size)//2, img.shape[0], img.shape[0]//grid_size) for y in range((img.shape[0]//grid_size)//2, img.shape[1], img.shape[0]//grid_size)]
+#takes the image and dimension of grid OR coords of features as arguments
+def get_kps(img, grid_size=None, coords=None):
+  if grid_size is not None: #for generating kps on regular grid
+    kps = [cv.KeyPoint(x, y, img.shape[0]//grid_size) for x in range((img.shape[0]//grid_size)//2, img.shape[0], img.shape[0]//grid_size) for y in range((img.shape[0]//grid_size)//2, img.shape[1], img.shape[0]//grid_size)]
+ # elif coords is not None: #for generating kps based off of predetermined coords
+  # kps = [cv.KeyPoint(x, y), ]
   return kps
+
+#def get_feature_coords(pts):
+
+def get_full_vector(des): #for getting the large concatenated vector
+  vector = np.array(des).reshape(-1, 1)
+  return vector
+
 
 blurd_train_imgs = gauss_blur_imgs(data['images'])#blurs the training images
 
 train_kps = []
 for img in blurd_train_imgs:
-  train_kps.append(get_init_kps(img, 7))
+  train_kps.append(get_kps(img, 5))
 
-sift.compute(blurd_train_imgs[0], train_kps[0])
+train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
 img_kp = np.zeros_like(data['images'][0])
 cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
+print(get_full_vector(des))
 
 plt.imshow(img_kp)
 plt.axis('off')
 plt.show()
+
+def augment_vec(data, poly_order):#allows for the data to be augmented to a given polynomial order
+  return np.concatenate([np.power(data, p) for p in range(poly_order+1)], axis=1)
 
 
 
