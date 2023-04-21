@@ -2,6 +2,8 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 from scipy.signal import convolve2d, convolve
+from sklearn.datasets import make_regression
+from sklearn.ensemble import RandomForestRegressor
 
 #sift object
 sift = cv.SIFT_create()
@@ -13,6 +15,7 @@ data = np.load('resources/training_images_full.npz', allow_pickle=True)
 images = data['images']
 # and the data points
 pts = data['points']
+
 
 #print(images.shape, pts.shape)
 
@@ -120,24 +123,32 @@ def get_kps(img, grid_size=None, coords=None):
 #def get_feature_coords(pts):
 
 def get_full_vector(des): #for getting the large concatenated vector
-  vector = np.array(des).reshape(-1, 1)
+  vector = np.array(des).reshape(-1)
   return vector
 
+def get_input_feats(imgs, kps_set):
+  vecs = []
+  for i, kps in enumerate(kps_set):
+    kps_set[i], des = sift.compute(imgs[i], kps_set[i])
+    vecs.append(get_full_vector(des))
+  vecs = np.asarray(vecs)
+  return vecs
 
-blurd_train_imgs = gauss_blur_imgs(data['images'])#blurs the training images
+blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
 
 train_kps = []
 for img in blurd_train_imgs:
   train_kps.append(get_kps(img, 5))
 
+'''
 train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
 img_kp = np.zeros_like(data['images'][0])
 cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
-print(get_full_vector(des))
+'''
 
-plt.imshow(img_kp)
-plt.axis('off')
-plt.show()
+train_vecs = get_input_feats(blurd_train_imgs, train_kps)
+
+
 
 def augment_vec(data, poly_order):#allows for the data to be augmented to a given polynomial order
   return np.concatenate([np.power(data, p) for p in range(poly_order+1)], axis=1)
