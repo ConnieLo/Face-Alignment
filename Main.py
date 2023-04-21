@@ -171,7 +171,7 @@ with open('first_regressor.dictionary', 'rb') as first_regressor:
 
 #result_points = result_points.reshape(554, 44, 2)
 with open('first_test_results.dictionary', 'rb') as first_results:
-  results = pickle.load(first_results)
+  result_points = pickle.load(first_results)
 for i in range(3):
   idx = np.random.randint(0, test_images.shape[0])
   print(idx)
