@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import convolve2d, convolve
 from sklearn.datasets import make_regression
 from sklearn.ensemble import RandomForestRegressor
+import pickle
 
 #sift object
 sift = cv.SIFT_create()
@@ -14,8 +15,10 @@ data = np.load('resources/training_images_full.npz', allow_pickle=True)
 # Extract the images
 images = data['images']
 # and the data points
-pts = data['points']
+pts = data['points']#
 
+print(images.shape)
+print(pts.shape)
 
 #print(images.shape, pts.shape)
 
@@ -31,7 +34,7 @@ pts_subset = data['points']
 
 test_data = np.load('resources/test_images.npz', allow_pickle=True)
 test_images = test_data['images']
-#print(test_images.shape)
+print(test_images.shape)
 
 example_data = np.load('resources/examples.npz', allow_pickle=True)
 example_images = example_data['images']
@@ -134,19 +137,45 @@ def get_input_feats(imgs, kps_set):
   vecs = np.asarray(vecs)
   return vecs
 
-blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
 
-train_kps = []
-for img in blurd_train_imgs:
-  train_kps.append(get_kps(img, 5))
+#blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
+blurd_test_imgs = gauss_blur_imgs(test_images)
 
-'''
-train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
-img_kp = np.zeros_like(data['images'][0])
-cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
-'''
 
-train_vecs = get_input_feats(blurd_train_imgs, train_kps)
+#train_kps = []
+#for img in blurd_train_imgs:
+  #train_kps.append(get_kps(img, 5))
+
+test_kps = []
+for img in blurd_test_imgs:
+  test_kps.append(get_kps(img, 5))
+
+
+
+#train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
+#img_kp = np.zeros_like(data['images'][0])
+#cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
+
+
+#train_vecs = get_input_feats(blurd_train_imgs, train_kps)
+#print(train_vecs.shape)
+test_vecs = get_input_feats(blurd_test_imgs, test_kps)
+
+pts = pts.reshape((1425, 88)) #to work inside fitting function
+print(pts.shape)
+#regressor = RandomForestRegressor(max_depth=5, random_state=0)
+#regressor.fit(train_vecs, pts)
+with open('first_regressor.dictionary', 'rb') as first_regressor:
+  regressor = pickle.load(first_regressor)
+#result_points = regressor.predict(test_vecs)
+
+#result_points = result_points.reshape(554, 44, 2)
+with open('first_test_results.dictionary', 'rb') as first_results:
+  results = pickle.load(first_results)
+for i in range(3):
+  idx = np.random.randint(0, test_images.shape[0])
+  print(idx)
+  visualise_pts(test_images[idx, ...], result_points[idx, ...])
 
 
 
