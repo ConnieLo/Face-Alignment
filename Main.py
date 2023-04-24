@@ -138,13 +138,13 @@ def get_input_feats(imgs, kps_set):
   return vecs
 
 
-#blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
+blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
 blurd_test_imgs = gauss_blur_imgs(test_images)
 
 
-#train_kps = []
-#for img in blurd_train_imgs:
-  #train_kps.append(get_kps(img, 5))
+train_kps = []
+for img in blurd_train_imgs:
+  train_kps.append(get_kps(img, 5))
 
 test_kps = []
 for img in blurd_test_imgs:
@@ -152,26 +152,34 @@ for img in blurd_test_imgs:
 
 
 
-#train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
+train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
 #img_kp = np.zeros_like(data['images'][0])
 #cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
 
 
-#train_vecs = get_input_feats(blurd_train_imgs, train_kps)
+train_vecs = get_input_feats(blurd_train_imgs, train_kps)
 #print(train_vecs.shape)
 test_vecs = get_input_feats(blurd_test_imgs, test_kps)
 
 pts = pts.reshape((1425, 88)) #to work inside fitting function
 print(pts.shape)
-#regressor = RandomForestRegressor(max_depth=5, random_state=0)
-#regressor.fit(train_vecs, pts)
-with open('first_regressor.dictionary', 'rb') as first_regressor:
-  regressor = pickle.load(first_regressor)
-#result_points = regressor.predict(test_vecs)
+regressor = RandomForestRegressor()
+regressor.fit(train_vecs, pts)
 
-#result_points = result_points.reshape(554, 44, 2)
-with open('first_test_results.dictionary', 'rb') as first_results:
-  result_points = pickle.load(first_results)
+with open('2_regressor', 'wb') as regressor_2:
+  pickle.dump(regressor, regressor_2)
+
+#with open('first_regressor.dictionary', 'rb') as first_regressor:
+  #regressor = pickle.load(first_regressor)
+result_points = regressor.predict(test_vecs)
+
+result_points = result_points.reshape(554, 44, 2)
+
+with open('2_results', 'wb') as results_2:
+  pickle.dump(result_points, results_2)
+
+#with open('first_test_results.dictionary', 'rb') as first_results:
+ #result_points = pickle.load(first_results)
 for i in range(3):
   idx = np.random.randint(0, test_images.shape[0])
   print(idx)
