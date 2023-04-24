@@ -48,7 +48,7 @@ def visualise_pts(img, pts):
   plt.show()
 
 #testing visualisation
-'''
+
 for i in range(3):
   idx = np.random.randint(0, images.shape[0])
   visualise_pts(images[idx, ...], pts[idx, ...])
@@ -56,7 +56,7 @@ for i in range(3):
 for i in range(3):
   idx = np.random.randint(0, images.shape[0])
   visualise_pts(images_subset[idx, ...], pts_subset[idx, ...])
-  '''
+  
 
 #extracts subset of points from full set
 def extract_subset_of_points(pts):
