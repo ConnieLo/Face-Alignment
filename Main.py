@@ -5,6 +5,7 @@ from scipy.signal import convolve2d, convolve
 from sklearn.datasets import make_regression
 from sklearn.ensemble import RandomForestRegressor
 import pickle
+import math
 
 #sift object
 sift = cv.SIFT_create()
@@ -72,7 +73,7 @@ for i in range(3):
   visualise_pts(images[idx, ...], extract_subset_of_points(pts[idx, ...]))
   '''
 
-#calculate euclidean distance (incomplete)
+#calculate euclidean distance
 def euclid_dist(pred_pts, gt_pts):
   """
   Calculate the euclidean distance between pairs of points
@@ -83,6 +84,14 @@ def euclid_dist(pred_pts, gt_pts):
   pred_pts = np.reshape(pred_pts, (-1, 2))
   gt_pts = np.reshape(gt_pts, (-1, 2))
   return np.sqrt(np.sum(np.square(pred_pts - gt_pts), axis=-1))
+
+#gets the mean sqrd error of one image
+def mean_sqrd_error(error):
+  total = 0
+  for num in error:
+    total += num**2
+  mean = math.sqrt(total)
+  return mean
 
 #save as csv [for when finished :)))))))]
 def save_as_csv(points, location = '.'):
@@ -139,16 +148,16 @@ def get_input_feats(imgs, kps_set):
 
 
 blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
-blurd_test_imgs = gauss_blur_imgs(test_images)
+#blurd_test_imgs = gauss_blur_imgs(test_images)
 
 
 train_kps = []
 for img in blurd_train_imgs:
   train_kps.append(get_kps(img, 5))
 
-test_kps = []
-for img in blurd_test_imgs:
-  test_kps.append(get_kps(img, 5))
+#test_kps = []
+#for img in blurd_test_imgs:
+  #test_kps.append(get_kps(img, 5))
 
 
 
@@ -159,31 +168,42 @@ train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
 
 train_vecs = get_input_feats(blurd_train_imgs, train_kps)
 #print(train_vecs.shape)
-test_vecs = get_input_feats(blurd_test_imgs, test_kps)
+#test_vecs = get_input_feats(blurd_test_imgs, test_kps)
 
-pts = pts.reshape((1425, 88)) #to work inside fitting function
-print(pts.shape)
-regressor = RandomForestRegressor()
-regressor.fit(train_vecs, pts)
+#pts = pts.reshape((1425, 88)) #to work inside fitting function
+#print(pts.shape)
+#regressor = RandomForestRegressor()
+#regressor.fit(train_vecs, pts)
 
-with open('2_regressor', 'wb') as regressor_2:
-  pickle.dump(regressor, regressor_2)
+#with open('2_regressor', 'wb') as regressor_2:
+  #pickle.dump(regressor, regressor_2)
 
-#with open('first_regressor.dictionary', 'rb') as first_regressor:
-  #regressor = pickle.load(first_regressor)
-result_points = regressor.predict(test_vecs)
+#with open('first_regressor.dictionary', 'rb') as regressor_2:
+  #regressor = pickle.load(regressor_2)
+#result_points = regressor.predict(train_vecs)
 
-result_points = result_points.reshape(554, 44, 2)
+#result_points = result_points.reshape(1425, 44, 2)
 
-with open('2_results', 'wb') as results_2:
-  pickle.dump(result_points, results_2)
+#with open('first_train_results', 'wb') as results_2:
+  #pickle.dump(result_points, results_2)
 
-#with open('first_test_results.dictionary', 'rb') as first_results:
- #result_points = pickle.load(first_results)
-for i in range(3):
-  idx = np.random.randint(0, test_images.shape[0])
-  print(idx)
-  visualise_pts(test_images[idx, ...], result_points[idx, ...])
+with open('2_results_train', 'rb') as first_results:
+ result_points = pickle.load(first_results)
+
+errors = []
+for i in range(images.shape[0]):
+  euc = euclid_dist(result_points[i, ...], pts[i, ...])
+  errors.append(mean_sqrd_error(euc))
+plt.plot(errors)
+plt.show()
+
+
+
+#for i in range(3):
+  #idx = np.random.randint(0, images.shape[0])
+  #print(idx)
+  #visualise_pts(images[idx, ...], result_points[idx, ...])
+
 
 
 

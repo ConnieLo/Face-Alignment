@@ -4,5 +4,7 @@ resources/training_images_full.npz
 resources/training_images_subset.npz
 2_regressor
 2_results
+2_results_train
 first_regressor.dictionary
 first_results.dictionary
+first_train_results
