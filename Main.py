@@ -194,7 +194,7 @@ errors = []
 for i in range(images.shape[0]):
   euc = euclid_dist(result_points[i, ...], pts[i, ...])
   errors.append(mean_sqrd_error(euc))
-plt.plot(errors)
+plt.scatter(errors, range(1425))
 plt.show()
 
 
