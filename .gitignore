@@ -2,3 +2,5 @@ resources/examples.npz
 resources/test_images.npz
 resources/training_images_full.npz
 resources/training_images_subset.npz
+2_regressor
+2_results
