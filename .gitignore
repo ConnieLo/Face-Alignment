@@ -8,3 +8,5 @@ resources/training_images_subset.npz
 first_regressor.dictionary
 first_results.dictionary
 first_train_results
+3_regressor
+3_train_results

@@ -46,7 +46,6 @@ def visualise_pts(img, pts):
   plt.imshow(img)
   plt.plot(pts[:, 0], pts[:, 1], '+r', ms=7)
   plt.show()
-
 #testing visualisation
 
 for i in range(3):
@@ -104,8 +103,8 @@ def save_as_csv(points, location = '.'):
     assert np.prod(points.shape[1:])==44*2, 'wrong number of points provided. There should be 34 points with 2 values (x,y) per point'
     np.savetxt(location + '/results.csv', np.reshape(points, (points.shape[0], -1)), delimiter=',')
 
-'''
-def gauss_blur_img(img): #this function applies the gaussian blur to an image
+
+'''def gauss_blur_img(img): #this function applies the gaussian blur to an image
   gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
   smooth = cv.GaussianBlur(gray, (101,101), 0)
   division = cv.divide(gray, smooth, scale=255)
@@ -119,7 +118,7 @@ def gauss_blur_imgs(imgs): #this function takes an array of images and returns t
   blurd_imgs = []
   for img in imgs:
     blurd = np.uint8(np.mean(img, axis=2)) #gray_scale
-    blurd = cv.GaussianBlur(blurd, (15,15), 0) #blur
+    blurd = cv.GaussianBlur(blurd, (35,35), 0) #blur
     blurd_imgs.append(blurd)
   
   return blurd_imgs
@@ -146,18 +145,21 @@ def get_input_feats(imgs, kps_set):
   vecs = np.asarray(vecs)
   return vecs
 
-
+'''
 blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
-#blurd_test_imgs = gauss_blur_imgs(test_images)
+plt.imshow(blurd_train_imgs[0], cmap='gray')
+plt.show()
+blurd_test_imgs = gauss_blur_imgs(test_images)
+
 
 
 train_kps = []
 for img in blurd_train_imgs:
   train_kps.append(get_kps(img, 5))
 
-#test_kps = []
-#for img in blurd_test_imgs:
-  #test_kps.append(get_kps(img, 5))
+test_kps = []
+for img in blurd_test_imgs:
+  test_kps.append(get_kps(img, 5))
 
 
 
@@ -167,42 +169,46 @@ train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
 
 
 train_vecs = get_input_feats(blurd_train_imgs, train_kps)
-#print(train_vecs.shape)
 #test_vecs = get_input_feats(blurd_test_imgs, test_kps)
 
-#pts = pts.reshape((1425, 88)) #to work inside fitting function
+pts = pts.reshape((1425, 88)) #to work inside fitting function
 #print(pts.shape)
-#regressor = RandomForestRegressor()
-#regressor.fit(train_vecs, pts)
+regressor = RandomForestRegressor()
+regressor.fit(train_vecs, pts)
 
-#with open('2_regressor', 'wb') as regressor_2:
-  #pickle.dump(regressor, regressor_2)
+with open('3_regressor', 'wb') as regressor_2:
+  pickle.dump(regressor, regressor_2)'''
 
-#with open('first_regressor.dictionary', 'rb') as regressor_2:
+#with open('3_regressor', 'rb') as regressor_2:
   #regressor = pickle.load(regressor_2)
 #result_points = regressor.predict(train_vecs)
 
 #result_points = result_points.reshape(1425, 44, 2)
 
-#with open('first_train_results', 'wb') as results_2:
+#with open('3_train_results', 'wb') as results_2:
   #pickle.dump(result_points, results_2)
 
-with open('2_results_train', 'rb') as first_results:
+with open('3_train_results', 'rb') as first_results:
  result_points = pickle.load(first_results)
 
+ with open('2_results_train', 'rb') as results_2:
+   results_2nd = pickle.load(results_2)
+
+'''
 errors = []
 for i in range(images.shape[0]):
   euc = euclid_dist(result_points[i, ...], pts[i, ...])
   errors.append(mean_sqrd_error(euc))
-plt.scatter(errors, range(1425))
-plt.show()
+plt.scatter(range(1425),errors)
+plt.show()'''
 
 
 
-#for i in range(3):
-  #idx = np.random.randint(0, images.shape[0])
-  #print(idx)
-  #visualise_pts(images[idx, ...], result_points[idx, ...])
+for i in range(3):
+  idx = np.random.randint(0, images.shape[0])
+  print(idx)
+  visualise_pts(images[idx, ...], result_points[idx, ...])
+  visualise_pts(images[idx, ...], results_2nd[idx, ...])
 
 
 
