@@ -30,6 +30,7 @@ data = np.load('resources/training_images_subset.npz', allow_pickle=True)
 images_subset = data['images']
 # and the data points
 pts_subset = data['points']
+print(pts_subset.shape)
 
 #print(images_subset.shape, pts_subset.shape)
 
@@ -39,12 +40,12 @@ print(test_images.shape)
 
 example_data = np.load('resources/examples.npz', allow_pickle=True)
 example_images = example_data['images']
-#print(example_images.shape)
+print(example_images.shape)
 
 #visualises points data
 def visualise_pts(img, pts):
   plt.imshow(img)
-  plt.plot(pts[:, 0], pts[:, 1], '+r', ms=7)
+  plt.plot(pts[:, 0], pts[:, 1], '+b', ms=7)
   plt.show()
 #testing visualisation
 
@@ -53,7 +54,7 @@ for i in range(3):
   visualise_pts(images[idx, ...], pts[idx, ...])
 
 for i in range(3):
-  idx = np.random.randint(0, images.shape[0])
+  idx = np.random.randint(0, images_subset.shape[0])
   visualise_pts(images_subset[idx, ...], pts_subset[idx, ...])
   
 
@@ -92,7 +93,7 @@ def mean_sqrd_error(error):
   mean = math.sqrt(total)
   return mean
 
-#save as csv [for when finished :)))))))]
+#save as csv
 def save_as_csv(points, location = '.'):
     """
     Save the points out as a .csv file
@@ -100,19 +101,8 @@ def save_as_csv(points, location = '.'):
     :param location: Directory to save results.csv in. Default to current working directory
     """
     assert points.shape[0]==554, 'wrong number of image points, should be 554 test images'
-    assert np.prod(points.shape[1:])==44*2, 'wrong number of points provided. There should be 34 points with 2 values (x,y) per point'
+    assert np.prod(points.shape[1:])==44*2, 'wrong number of points provided. There should be 44 points with 2 values (x,y) per point'
     np.savetxt(location + '/results.csv', np.reshape(points, (points.shape[0], -1)), delimiter=',')
-
-
-'''def gauss_blur_img(img): #this function applies the gaussian blur to an image
-  gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-  smooth = cv.GaussianBlur(gray, (101,101), 0)
-  division = cv.divide(gray, smooth, scale=255)
-  plt.imshow(division, cmap='gray', vmin=0, vmax=255)
-  plt.show()
-  return division'''
-
-#make new list of blurred images
 
 def gauss_blur_imgs(imgs): #this function takes an array of images and returns them all with gaussian blur
   blurd_imgs = []
@@ -121,94 +111,193 @@ def gauss_blur_imgs(imgs): #this function takes an array of images and returns t
     blurd = cv.GaussianBlur(blurd, (35,35), 0) #blur
     blurd_imgs.append(blurd)
   
-  return blurd_imgs
+  return np.array(blurd_imgs)
 
 #takes the image and dimension of grid OR coords of features as arguments
 def get_kps(img, grid_size=None, coords=None):
   if grid_size is not None: #for generating kps on regular grid
     kps = [cv.KeyPoint(x, y, img.shape[0]//grid_size) for x in range((img.shape[0]//grid_size)//2, img.shape[0], img.shape[0]//grid_size) for y in range((img.shape[0]//grid_size)//2, img.shape[1], img.shape[0]//grid_size)]
- # elif coords is not None: #for generating kps based off of predetermined coords
-  # kps = [cv.KeyPoint(x, y), ]
+  
+  elif coords is not None and coords.shape[0]==5: #for generating kps based off of predetermined coords
+    #the size of each kp is the distance between corner of left eye and right corner of mouth
+    kps = []
+    for i in range(coords.shape[0]):
+      kps.append(cv.KeyPoint(coords[i, 0], coords[i, 1], np.sqrt(np.sum(np.square(coords[0, ...] - coords[-1, ...])))))
+    #adds a sixth descriptor to be around the chin area
+    kps.append(cv.KeyPoint(coords[2, 0], coords[2, 1]+np.sqrt(np.sum(np.square(coords[0, ...] - coords[-1, ...]))), np.sqrt(np.sum(np.square(coords[0, ...] - coords[-1, ...])))))
+  
   return kps
 
-#def get_feature_coords(pts):
+def get_full_kps(imgs, grid=None, coords=None):
+  kps = []
+  if coords is not None: #generates kps with predetermined coordinates
+    for i,img in enumerate(imgs):
+      kps.append(get_kps(img, grid, coords[i, ...]))
+  else:
+    for i,img in enumerate(imgs): #generates kps on regular grid
+      kps.append(get_kps(img, grid))
+  return kps
 
 def get_full_vector(des): #for getting the large concatenated vector
-  vector = np.array(des).reshape(-1)
+  vector = np.array(des).reshape(-1) #makes the array of descriptors 1D
   return vector
 
 def get_input_feats(imgs, kps_set):
-  vecs = []
-  for i, kps in enumerate(kps_set):
-    kps_set[i], des = sift.compute(imgs[i], kps_set[i])
+  vecs = [] #defines a list to hold all the descriptor vectors for dataset
+  for i, kps in enumerate(kps_set): #computes the descriptors for every set of kps and adds to list
+    kps_set[i], des = sift.compute(imgs[i], kps)
     vecs.append(get_full_vector(des))
-  vecs = np.asarray(vecs)
+  vecs = np.asarray(vecs) #converts to numpy array
   return vecs
 
 
-#blurd_train_imgs = gauss_blur_imgs(images)#blurs the training images
-#plt.imshow(blurd_train_imgs[0], cmap='gray')
-plt.show()
-blurd_test_imgs = gauss_blur_imgs(test_images)
+blurd_train_imgs_full = gauss_blur_imgs(images)#blurs the training images
+blurd_train_imgs, blurd_valid_imgs = np.split(blurd_train_imgs_full, [(blurd_train_imgs_full.shape[0]*8)//10])#separates validation set from the full training set
+blurd_sub_imgs = gauss_blur_imgs(images_subset) #blurs the images from the dataset only marked with the subset of 5 points
+blurd_test_imgs = gauss_blur_imgs(test_images) #blurs the test images
+blurd_exam_imgs = gauss_blur_imgs(example_images) #blurs the example images
+
+sub_sub_kps = get_full_kps(blurd_sub_imgs, grid=5) #gets the kps for the images from the subset dataset
+sub_train_kps = get_full_kps(blurd_train_imgs, grid=5) #gets the kps for the training images
+sub_exam_kps = get_full_kps(blurd_exam_imgs, grid=5) #gets the kps for the example images
+sub_valid_kps = get_full_kps(blurd_valid_imgs, grid=5) #gets the kps for the validation images
+sub_test_kps = get_full_kps(blurd_test_imgs, grid=5) #gets the kps for the test set
 
 
+sub_train_vecs = get_input_feats(np.concatenate((blurd_train_imgs,blurd_sub_imgs), axis=0), sub_train_kps+sub_sub_kps) #gets the vectors for the subset and training images together
+sub_valid_vecs = get_input_feats(blurd_valid_imgs, sub_valid_kps) #gets the vectors for the validation set
+sub_exam_vecs = get_input_feats(blurd_exam_imgs, sub_exam_kps) #gets the vectors for the example set
+sub_test_vecs = get_input_feats(blurd_test_imgs, sub_test_kps) #gets the vectors for the example set
 
-#train_kps = []
-#for img in blurd_train_imgs:
-  #train_kps.append(get_kps(img, 5))
+#gathers subset of 5 ground truth points for training and validation data
+sub_pts = np.concatenate((extract_subset_of_points(pts[:blurd_train_imgs.shape[0]]), pts_subset), axis=0)#gets the subset of 5 points from every image in the dataset and concatenates with the subset dataset
+sub_pts = sub_pts.reshape((blurd_train_imgs.shape[0]+blurd_sub_imgs.shape[0], 10)) #reshapes to remove the 3rd axis to be used in the regressor
+sub_valid_pts = extract_subset_of_points(pts[blurd_train_imgs.shape[0]:]) 
 
-test_kps = []
-for img in blurd_test_imgs:
-  test_kps.append(get_kps(img, 5))
+#calls and trains primary regressor
+sub_regressor = RandomForestRegressor(max_depth=10)
+sub_regressor.fit(sub_train_vecs, sub_pts)
 
+#gets results for different sets of data
+sub_train_res = sub_regressor.predict(sub_train_vecs)
+sub_valid_res = sub_regressor.predict(sub_valid_vecs)
+sub_exam_res = sub_regressor.predict(sub_exam_vecs)
+sub_test_res = sub_regressor.predict(sub_test_vecs)
 
+#separates the results of the images with the full set of GT points to train secondary regressor
+sub_train_res, sub_sub_res = np.split(sub_train_res, [blurd_train_imgs.shape[0]]) 
 
-#train_kps[0], des = sift.compute(blurd_train_imgs[0], train_kps[0])
-#img_kp = np.zeros_like(data['images'][0])
-#cv.drawKeypoints(data['images'][0], train_kps[0], img_kp, flags=4)
+#reshapes to work in kp generation
+sub_train_res = sub_train_res.reshape(sub_train_res.shape[0], 5, 2)
+sub_sub_res = sub_sub_res.reshape(sub_sub_res.shape[0], 5, 2)
+sub_valid_res = sub_valid_res.reshape(sub_valid_res.shape[0], 5, 2)
+sub_exam_res = sub_exam_res.reshape(sub_exam_res.shape[0], 5, 2)
+sub_test_res = sub_test_res.reshape(sub_test_res.shape[0], 5, 2)
 
+#gathers set of 6 kps for secondary regressor
+ult_train_kps = get_full_kps(blurd_train_imgs, coords=sub_train_res)
+ult_valid_kps = get_full_kps(blurd_valid_imgs, coords=sub_valid_res)
+ult_exam_kps = get_full_kps(blurd_exam_imgs, coords=sub_exam_res)
+ult_test_kps = get_full_kps(blurd_test_imgs, coords=sub_test_res)
 
-#train_vecs = get_input_feats(blurd_train_imgs, train_kps)
-test_vecs = get_input_feats(blurd_test_imgs, test_kps)
+#gets the vector descriptions for secondary regressor
+ult_train_vecs = get_input_feats(blurd_train_imgs, ult_train_kps)
+ult_valid_vecs = get_input_feats(blurd_valid_imgs, ult_valid_kps)
+ult_exam_vecs = get_input_feats(blurd_exam_imgs, ult_exam_kps)
+ult_test_vecs = get_input_feats(blurd_test_imgs, ult_test_kps)
 
-#pts = pts.reshape((1425, 88)) #to work inside fitting function
-#print(pts.shape)
-#regressor = RandomForestRegressor()
-#regressor.fit(train_vecs, pts)
+#gathers GT points for training and validation set
+train_pts, valid_pts = np.split(pts, [blurd_train_imgs.shape[0]]) 
+train_pts = train_pts.reshape(train_pts.shape[0], 88) #to work in fitting function
 
-#with open('3_regressor', 'wb') as regressor_2:
-  #pickle.dump(regressor, regressor_2)
+#calls and trains secondary regressor
+ult_regressor = RandomForestRegressor(max_depth=10)
+ult_regressor.fit(ult_train_vecs, train_pts)
 
-with open('3_regressor', 'rb') as regressor_2:
-  regressor = pickle.load(regressor_2)
-result_points = regressor.predict(test_vecs)
+#gathers predictions from secondary regressor
+ult_train_res = ult_regressor.predict(ult_train_vecs)
+ult_valid_res = ult_regressor.predict(ult_valid_vecs)
+ult_exam_res = ult_regressor.predict(ult_exam_vecs)
+ult_test_res = ult_regressor.predict(ult_test_vecs)
 
-result_points = result_points.reshape(554, 44, 2)
+#reshapes results for display and testing
+ult_train_res = ult_train_res.reshape(ult_train_res.shape[0], 44, 2)
+ult_valid_res = ult_valid_res.reshape(ult_valid_res.shape[0], 44, 2)
+ult_exam_res = ult_exam_res.reshape(ult_exam_res.shape[0], 44, 2)
+ult_test_res = ult_test_res.reshape(ult_test_res.shape[0], 44, 2)
 
-with open('3_test_results', 'wb') as results_2:
-  pickle.dump(result_points, results_2)
+#reshapes points arrays for display/testing
+sub_pts = sub_pts.reshape(sub_pts.shape[0], 5, 2)
+train_pts = train_pts.reshape(train_pts.shape[0], 44, 2)
 
-#with open('3_train_results', 'rb') as first_results:
- #result_points = pickle.load(first_results)
+#concats list of original images used to train primary regressor
+sub_imgs = np.concatenate((images[:blurd_train_imgs.shape[0]], images_subset), axis=0)
 
- #with open('2_results_train', 'rb') as results_2:
-   #results_2nd = pickle.load(results_2)
+#defines list to hold the error of training and validation data
+sub_train_errors = []
+sub_valid_errors = []
+ult_train_errors = []
+ult_valid_errors = []
 
-'''
-errors = []
-for i in range(images.shape[0]):
-  euc = euclid_dist(result_points[i, ...], pts[i, ...])
-  errors.append(mean_sqrd_error(euc))
-plt.scatter(range(1425),errors)
-plt.show()'''
+#separates original training images into training and validation set
+train_imgs, valid_imgs = np.split(images, [blurd_train_imgs.shape[0]])
 
-
-
+#displays 3 examples of training images with GT and then predicted points from primary regressor
 for i in range(3):
-  idx = np.random.randint(0, test_images.shape[0])
-  print(idx)
-  visualise_pts(test_images[idx, ...], result_points[idx, ...])
+  idx = np.random.randint(0, sub_imgs.shape[0])
+  visualise_pts(sub_imgs[idx, ...], sub_pts[idx, ...])
+  visualise_pts(sub_imgs[idx, ...], np.concatenate((sub_train_res, sub_sub_res), axis=0)[idx, ...])
 
+#displays 3 examples of valid images with GT and then predicted points
+for i in range(3):
+  idx = np.random.randint(0, valid_imgs.shape[0])
+  visualise_pts(valid_imgs[idx, ...], sub_valid_pts[idx, ...])
+  visualise_pts(valid_imgs[idx, ...], sub_valid_res[idx, ...])
 
+#finds mean squared error for every set of predicted points for training set
+for i in range(sub_train_res.shape[0]):
+  euc = euclid_dist(np.concatenate((sub_train_res, sub_sub_res), axis=0)[i, ...], sub_pts[i, ...])
+  mean = mean_sqrd_error(euc)
+  sub_train_errors.append(mean)
 
+#finds mean squared error for every set of predicted points for validation set
+for i in range(sub_valid_res.shape[0]):
+  euc = euclid_dist(sub_valid_res[i, ...], sub_valid_pts[i, ...])
+  mean = mean_sqrd_error(euc)
+  sub_valid_errors.append(mean)
 
+#plots the error from the primary predicted points for each image in training and validation set in red and blue respectively
+plt.scatter(range(sub_train_res.shape[0]), sub_train_errors, c='b')
+plt.scatter(range(sub_train_res.shape[0], sub_train_res.shape[0]+sub_valid_res.shape[0]), sub_valid_errors, c='r')
+plt.show()
+
+#displays 3 examples of training images with GT and then secondary predicted points
+for i in range(3):
+  idx = np.random.randint(0, train_imgs.shape[0])
+  visualise_pts(train_imgs[idx, ...], train_pts[idx, ...])
+  visualise_pts(train_imgs[idx, ...], ult_train_res[idx, ...])
+
+#displays 3 examples of valid images with GT and then secondary predicted points
+for i in range(3):
+  idx = np.random.randint(0, valid_imgs.shape[0])
+  visualise_pts(valid_imgs[i, ...], valid_pts[idx, ...])
+  visualise_pts(valid_imgs[idx, ...], ult_valid_res[idx, ...])
+
+#finds mean squared error for every set of predicted points for training set
+for i in range(ult_train_res.shape[0]):
+  euc = euclid_dist(ult_train_res[i, ...], train_pts[i, ...])
+  mean = mean_sqrd_error(euc)
+  ult_train_errors.append(mean)
+
+#finds mean squared error for every set of predicted points for validation set
+for i in range(ult_valid_res.shape[0]):
+  euc = euclid_dist(ult_valid_res[i, ...], valid_pts[i, ...])
+  mean = mean_sqrd_error(euc)
+  ult_valid_errors.append(mean)
+
+#plots the error for each image in training and validation set in red and blue respectively
+plt.scatter(range(ult_train_res.shape[0]), ult_train_errors, c='b')
+plt.scatter(range(ult_train_res.shape[0], ult_train_res.shape[0]+ult_valid_res.shape[0]), ult_valid_errors, c='r')
+plt.show()
+
+save_as_csv(ult_test_res)
